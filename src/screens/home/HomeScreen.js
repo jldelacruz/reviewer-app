@@ -1,10 +1,12 @@
-import { Text, IconButton } from "react-native-paper";
+import { Text } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 
 const HomeScreen = () => {
     return(
-        <>
+        <SafeAreaView>
             <Text>Home</Text>
-        </>
+        </SafeAreaView>
     );
 }
 

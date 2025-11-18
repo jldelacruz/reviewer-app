@@ -1,33 +1,28 @@
-import * as React from 'react';
-import { BottomNavigation, Text } from 'react-native-paper';
-import Reviewers from '../screens/reviewers/ReviewersScreen';
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { NavigationContainer } from "@react-navigation/native";
 
-const HomeRoute = () => <Text>Home</Text>;
+import BottomTabs from "./BottomTabs";
+import ReviewerDetailsScreen from "../screens/reviewers/ReviewerDetailsScreen";
 
-const ReviewersRoute = () => <Reviewers />;
-
-const SettingsRoute = () => <Text>Settings</Text>;
+const Stack = createNativeStackNavigator();
 
 const AppNavigation = () => {
-  const [index, setIndex] = React.useState(0);
-  const [routes] = React.useState([
-    { key: 'home', title: 'Home', focusedIcon: 'heart', unfocusedIcon: 'heart-outline'},
-    { key: 'reviewers', title: 'Reviewers', focusedIcon: 'album' },
-    { key: 'settings', title: 'Settings', focusedIcon: 'history' },
-  ]);
-
-  const renderScene = BottomNavigation.SceneMap({
-    home: HomeRoute,
-    reviewers: ReviewersRoute,
-    settings: SettingsRoute,
-  });
-
   return (
-    <BottomNavigation
-      navigationState={{ index, routes }}
-      onIndexChange={setIndex}
-      renderScene={renderScene}
-    />
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen 
+          name="MainTabs" 
+          component={BottomTabs} 
+          options={{ headerShown: false }} 
+        />
+
+        <Stack.Screen 
+          name="ReviewerDetails" 
+          component={ReviewerDetailsScreen}
+          options={{ title: "Reviewer Title" }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
