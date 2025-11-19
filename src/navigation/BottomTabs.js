@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/home/HomeScreen";
 import ReviewersScreen from "../screens/reviewers/ReviewersScreen";
 import SettingsScreen from "../screens/settings/SettingsScreen";
-import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator();
 
