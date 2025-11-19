@@ -3,15 +3,9 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Card, Text, IconButton, TouchableRipple } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { pastel } from "../theme/pastel";
 
-const pastel = {
-  primary: "#C7A6FF",
-  textDark: "#2A2A2A",
-  textLight: "#7A7A7A",
-  card: "#FFFFFF",
-};
-
-export default function ReviewerCard({ item, onPress, onEdit, onDelete }) {
+export default function ReviewerCard({ item, onPress, onEdit, onDelete, onPlay }) {
   return (
     <TouchableRipple
       onPress={onPress}
@@ -33,6 +27,7 @@ export default function ReviewerCard({ item, onPress, onEdit, onDelete }) {
             </Text>
           </View>
 
+          <IconButton icon="play" size={23} onPress={onPlay} />
           <IconButton icon="pencil" size={20} onPress={onEdit} />
           <IconButton icon="delete" size={20} onPress={onDelete} />
         </Card.Content>

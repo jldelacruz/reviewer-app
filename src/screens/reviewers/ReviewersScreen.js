@@ -2,11 +2,15 @@
 import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet, Alert } from "react-native";
 import { FAB, Text } from "react-native-paper";
+import * as Speech from "expo-speech";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-native-uuid";
+
 import ReviewerCard from "../../components/ReviewerCard";
 import ReviewerModal from "../../components/ReviewerModal";
-import { loadReviewers, saveReviewers } from "../../services/reviewerStorage";
 import ConfirmDialog from "../../components/ConfirmDialog";
+
+import { loadReviewers, saveReviewers } from "../../services/reviewerStorage";
 import { pastel } from "../../theme/pastel";
 
 export default function ReviewersScreen({ navigation }) {
@@ -73,6 +77,36 @@ export default function ReviewersScreen({ navigation }) {
     setConfirmVisible(false);
   };
 
+  const playReviewer = async (reviewer) => {
+    try {
+      const storageKey = `reviewer_${reviewer.id}_qa`;
+      const saved = await AsyncStorage.getItem(storageKey);
+
+      if (!saved) {
+        Speech.speak("This reviewer has no questions yet.");
+        return;
+      }
+
+      const list = JSON.parse(saved);
+
+      if (list.length === 0) {
+        Speech.speak("This reviewer has no questions yet.");
+        return;
+      }
+
+      let script = "";
+      list.forEach((item, index) => {
+        script += `Question ${index + 1}. ${item.question}. Answer: ${item.answer}. `;
+      });
+
+      Speech.speak(`Let's start reviewing ${reviewer.title}. ` + script, { rate: 0.70, pitch: 1.0 });
+
+    } catch (err) {
+      console.log("TTS error", err);
+    }
+  };
+
+
   return (
     <View style={styles.container}>
       <Text variant="headlineSmall" style={styles.headerText}>
@@ -88,6 +122,7 @@ export default function ReviewersScreen({ navigation }) {
             onPress={() => navigation.navigate("ReviewerDetails", { reviewer: item })}
             onEdit={() => openEdit(item)}
             onDelete={() => askDeleteReviewer(item.id)}
+            onPlay={() => playReviewer(item)}
           />
         )}
       />
