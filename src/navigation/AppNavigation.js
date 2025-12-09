@@ -4,13 +4,14 @@ import { NavigationContainer } from "@react-navigation/native";
 import BottomTabs from "./BottomTabs";
 import ReviewerDetailsScreen from "../screens/reviewers/ReviewerDetailsScreen";
 import QnAFormScreen from "../screens/reviewers/QnAFormScreen";
+import QuizScreen from "../screens/quizes/QuizScreen";
 
 const Stack = createNativeStackNavigator();
 
 const AppNavigation = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator screenOptions={{headerShown: false}}>
         <Stack.Screen 
           name="MainTabs" 
           component={BottomTabs} 
@@ -27,6 +28,12 @@ const AppNavigation = () => {
           name="QnAForm" 
           component={QnAFormScreen}
           options={{ title: "Q & A Title" }}
+        />
+
+        <Stack.Screen 
+          name="Quiz" 
+          component={QuizScreen}
+          options={{ title: "Quiz" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

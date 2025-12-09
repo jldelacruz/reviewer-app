@@ -131,7 +131,7 @@ export default function ReviewersScreen({ navigation }) {
       <ReviewerModal
         visible={modalVisible}
         onDismiss={() => setModalVisible(false)}
-        title={editMode ? "Edit Reviewer" : "Add Reviewer"}
+        title={editMode ? "Edit Reviewer" : "Create Reviewer"}
         value={titleValue}
         setValue={setTitleValue}
         onSave={saveReviewer}
@@ -167,6 +167,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 24,
     right: 24,
-    backgroundColor: pastel.primary,
+    backgroundColor: pastel.blue,
   },
 });
