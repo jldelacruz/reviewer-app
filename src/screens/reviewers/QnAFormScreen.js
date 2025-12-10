@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { View, StyleSheet, PermissionsAndroid, Platform } from "react-native";
+import { View, StyleSheet, PermissionsAndroid, Platform, Dimensions } from "react-native";
 import { Text, TextInput, Button, IconButton } from "react-native-paper";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,36 +17,37 @@ export default function QnAFormScreen({ route, navigation }) {
 
   const [question, setQuestion] = useState(editingItem?.question || "");
   const [answer, setAnswer] = useState(editingItem?.answer || "");
-
   const [activeField, setActiveField] = useState(null);
+
   const [isListening, setIsListening] = useState(false);
   const [sttText, setSttText] = useState("");
 
   const bottomSheetRef = useRef(null);
+  const mascotRef = useRef(null);
 
-  // ⭐ Two animations
-  const idleRef = useRef(null);
-  const listeningRef = useRef(null);
+  // ---- Frame ranges ----
+  const idleFrames = [0, 47];
+  const transitionFrames = [54, 77];
+  const listeningFrames = [70, 117];
 
-  const snapPoints = useMemo(() => ["25%", "50%"], []);
+  const snapPoints = useMemo(() => ["30%", "55%"], []);
 
   const openSheet = () => {
     bottomSheetRef.current?.expand();
+
     setTimeout(() => {
-      idleRef.current?.play(); // 🟢 Play IDLE when sheet opens
+      // Always start idle when sheet opens
+      mascotRef.current?.play(idleFrames[0], idleFrames[1]);
     }, 150);
   };
 
   const closeSheet = () => {
     bottomSheetRef.current?.close();
     setIsListening(false);
-
-    // Reset animations
-    listeningRef.current?.reset();
-    idleRef.current?.reset();
+    mascotRef.current?.reset();
   };
 
-  // MIC permission
+  // Ask for mic permission
   async function requestMicPermission() {
     if (Platform.OS !== "android") return true;
 
@@ -62,14 +63,27 @@ export default function QnAFormScreen({ route, navigation }) {
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
 
-  // STT Event Listeners
+  // STT event listeners
   useEffect(() => {
     const startEvent = addEventListener("onSpeechStart", () => {
       setIsListening(true);
+
+      // transition → listening loop
+      mascotRef.current?.play(transitionFrames[0], transitionFrames[1]);
+      setTimeout(() => {
+        mascotRef.current?.play(listeningFrames[0], listeningFrames[1]);
+      }, 600);
     });
 
     const endEvent = addEventListener("onSpeechEnd", () => {
       setIsListening(false);
+
+      // reverse transition back to idle
+      mascotRef.current?.play(transitionFrames[1], transitionFrames[0]);
+
+      setTimeout(() => {
+        mascotRef.current?.play(idleFrames[0], idleFrames[1]);
+      }, 600); // match your transition length
     });
 
     const resultsEvent = addEventListener("onSpeechResults", (e) => {
@@ -92,18 +106,7 @@ export default function QnAFormScreen({ route, navigation }) {
     };
   }, [activeField]);
 
-  // Animation state controller
-  useEffect(() => {
-    if (isListening) {
-      idleRef.current?.reset();
-      listeningRef.current?.play(); // 🔴 Animate listening
-    } else {
-      listeningRef.current?.reset();
-      idleRef.current?.play(); // 🟢 Back to idle
-    }
-  }, [isListening]);
-
-  // Toggle STT
+  // Start / Stop STT
   const toggleListening = async () => {
     const ok = await requestMicPermission();
     if (!ok) return;
@@ -125,6 +128,7 @@ export default function QnAFormScreen({ route, navigation }) {
 
     const key = `reviewer_${reviewer.id}_qa`;
     const saved = await AsyncStorage.getItem(key);
+
     let list = saved ? JSON.parse(saved) : [];
 
     if (editingItem) {
@@ -158,13 +162,17 @@ export default function QnAFormScreen({ route, navigation }) {
         value={question}
         onChangeText={setQuestion}
         style={styles.textArea}
-        right={
-          <TextInput.Icon icon="microphone" onPress={() => {
+      />
+
+      <View style={styles.iconRow}>
+        <IconButton
+          icon="microphone"
+          onPress={() => {
             setActiveField("question");
             openSheet();
-          }} />
-        }
-      />
+          }}
+        />
+      </View>
 
       {/* ANSWER FIELD */}
       <TextInput
@@ -175,14 +183,19 @@ export default function QnAFormScreen({ route, navigation }) {
         value={answer}
         onChangeText={setAnswer}
         style={styles.textArea}
-        right={
-          <TextInput.Icon icon="microphone" onPress={() => {
+      />
+
+      <View style={styles.iconRow}>
+        <IconButton
+          icon="microphone"
+          onPress={() => {
             setActiveField("answer");
             openSheet();
-          }} />
-        }
-      />
-      <Button mode="contained" onPress={save} style={{ marginBottom: 10, marginTop: 30 }}>
+          }}
+        />
+      </View>
+
+      <Button mode="contained" onPress={save} style={{ marginBottom: 10 }}>
         Save
       </Button>
 
@@ -190,38 +203,18 @@ export default function QnAFormScreen({ route, navigation }) {
         Cancel
       </Button>
 
-      {/* BOTTOM SHEET */}
+      {/* BOTTOM SHEET WITH MASCOT + STT UI */}
       <BottomSheet ref={bottomSheetRef} snapPoints={snapPoints} index={-1}>
         <BottomSheetView style={styles.sheetContainer}>
-
-          {/* IDLE Animation */}
           <LottieView
-            ref={idleRef}
-            source={require("../../assets/robot_idle.json")}
-            style={[
-              styles.robot,
-              { opacity: isListening ? 0 : 1 } // 👈 hide when listening
-            ]}
-            loop
-            autoPlay={false}
-          />
-
-          {/* LISTENING Animation */}
-          <LottieView
-            ref={listeningRef}
+            ref={mascotRef}
             source={require("../../assets/robot_listening.json")}
-            style={[
-              styles.robot,
-              { 
-                opacity: isListening ? 1 : 0, // 👈 show only when listening
-                position: "absolute"
-              }
-            ]}
+            style={styles.mascot}
             loop
             autoPlay={false}
           />
 
-          <Text variant="titleMedium" style={{ marginTop: 10, marginBottom: 10 }}>
+          <Text variant="titleMedium" style={{ marginBottom: 10 }}>
             {activeField === "question"
               ? "Dictating Question"
               : "Dictating Answer"}
@@ -238,19 +231,55 @@ export default function QnAFormScreen({ route, navigation }) {
           <Button mode="text" onPress={closeSheet} style={{ marginTop: 10 }}>
             Close
           </Button>
-
         </BottomSheetView>
       </BottomSheet>
     </View>
   );
 }
 
+const { width } = Dimensions.get("window");
+const mascotSize = width * 0.55; // mascot scales based on screen width
+
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff", },
-  header: { fontWeight: "700", marginBottom: 16 },
-  textArea: { marginBottom: 10, minHeight: 100 },
-  iconRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-  sheetContainer: { padding: 20, alignItems: "center" },
-  liveText: { marginBottom: 20, fontSize: 16, opacity: 0.7 },
-  robot: { width: 150, height: 150 },
+  container: { 
+    flex: 1, 
+    padding: 16, 
+    backgroundColor: "#fff" 
+  },
+
+  header: { 
+    fontWeight: "700", 
+    marginBottom: 16 
+  },
+
+  textArea: { 
+    marginBottom: 10, 
+    minHeight: 100 
+  },
+
+  iconRow: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    marginBottom: 16 
+  },
+
+  sheetContainer: { 
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+
+  mascot: {
+    width: mascotSize,
+    height: mascotSize,
+    marginBottom: 10,
+  },
+
+  liveText: { 
+    marginBottom: 20, 
+    fontSize: 16, 
+    opacity: 0.7,
+    textAlign: "center",
+  },
 });
+
