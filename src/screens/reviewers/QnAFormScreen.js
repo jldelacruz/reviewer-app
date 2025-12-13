@@ -30,15 +30,15 @@ export default function QnAFormScreen({ route, navigation }) {
   const transitionFrames = [54, 77];
   const listeningFrames = [70, 117];
 
-  const snapPoints = useMemo(() => ["30%", "55%"], []);
+  const snapPoints = useMemo(() => ["45%", "70%"], []);
 
   const openSheet = () => {
     bottomSheetRef.current?.expand();
 
+    // Let the sheet finish animating before mascot moves
     setTimeout(() => {
-      // Always start idle when sheet opens
       mascotRef.current?.play(idleFrames[0], idleFrames[1]);
-    }, 150);
+    }, 250);
   };
 
   const closeSheet = () => {
@@ -63,48 +63,39 @@ export default function QnAFormScreen({ route, navigation }) {
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
 
-  // STT event listeners
   useEffect(() => {
     const startEvent = addEventListener("onSpeechStart", () => {
       setIsListening(true);
 
-      // transition → listening loop
+      // Idle ➜ Transition
       mascotRef.current?.play(transitionFrames[0], transitionFrames[1]);
+
+      // Transition ➜ Listening loop
       setTimeout(() => {
         mascotRef.current?.play(listeningFrames[0], listeningFrames[1]);
-      }, 600);
+      }, 600); // adjust to your transition duration
     });
 
     const endEvent = addEventListener("onSpeechEnd", () => {
       setIsListening(false);
 
-      // reverse transition back to idle
-      mascotRef.current?.play(transitionFrames[1], transitionFrames[0]);
+      // Listening ➜ Transition (reverse)
+      mascotRef.current?.play(
+        transitionFrames[1],
+        transitionFrames[0]
+      );
 
+      // Transition ➜ Idle loop
       setTimeout(() => {
         mascotRef.current?.play(idleFrames[0], idleFrames[1]);
-      }, 600); // match your transition length
-    });
-
-    const resultsEvent = addEventListener("onSpeechResults", (e) => {
-      setSttText(e.value);
-      if (activeField === "question") setQuestion(e.value);
-      if (activeField === "answer") setAnswer(e.value);
-    });
-
-    const partialEvent = addEventListener("onSpeechPartialResults", (e) => {
-      setSttText(e.value);
-      if (activeField === "question") setQuestion(e.value);
-      if (activeField === "answer") setAnswer(e.value);
+      }, 600);
     });
 
     return () => {
       startEvent.remove();
       endEvent.remove();
-      resultsEvent.remove();
-      partialEvent.remove();
     };
-  }, [activeField]);
+  }, []);
 
   // Start / Stop STT
   const toggleListening = async () => {

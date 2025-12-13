@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, StyleSheet } from "react-native";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { View, StyleSheet, Dimensions } from "react-native";
 import { Text, Button, Card, RadioButton } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import LottieView from "lottie-react-native";
 
 export default function QuizScreen({ route, navigation }) {
   const { reviewer, globalShuffle } = route.params;
@@ -16,23 +17,32 @@ export default function QuizScreen({ route, navigation }) {
   const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(0);
 
+  // 🧠 Mascot state machine
+  const [mascotState, setMascotState] = useState("idle"); 
+  // "idle" | "happy" | "sad"
+
+  const mascotRef = useRef(null);
+
+  // 🎞 FRAME RANGES
+  const idleFrames = [0, 47];
+  const happyFrames = [47, 134];
+  const sadFrames = [134, 210];
+
   // -------------------------------------
-  // Load stored questions only once
+  // Load stored questions once
   // -------------------------------------
   useEffect(() => {
     loadData();
   }, []);
 
-  // Whenever the active question changes, regenerate choices
+  // Generate choices when question changes
   useEffect(() => {
     if (items.length > 0) {
       generateOptions();
     }
   }, [items, index]);
 
-  // -------------------------------------
-  // Re-shuffle every time the screen gains focus
-  // -------------------------------------
+  // Shuffle on focus
   useFocusEffect(
     useCallback(() => {
       if (originalItems.length > 0) {
@@ -41,7 +51,9 @@ export default function QuizScreen({ route, navigation }) {
     }, [globalShuffle, originalItems])
   );
 
-  // Load saved QNAs
+  // -------------------------------------
+  // Data
+  // -------------------------------------
   const loadData = async () => {
     const storageKey = `reviewer_${reviewer.id}_qa`;
     const saved = await AsyncStorage.getItem(storageKey);
@@ -49,24 +61,17 @@ export default function QuizScreen({ route, navigation }) {
     setOriginalItems(list);
   };
 
-  // Shuffle logic
-  const applyShuffle = () => {
-    if (globalShuffle) {
-      setItems(shuffleArray(originalItems));
-    } else {
-      setItems(originalItems);
-    }
+  const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
-    // Reset quiz whenever shuffle changes or screen reopens
+  const applyShuffle = () => {
+    setItems(globalShuffle ? shuffleArray(originalItems) : originalItems);
     setIndex(0);
     setScore(0);
     setSelected(null);
     setIsAnswered(false);
+    playIdle();
   };
 
-  const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
-
-  // Generate answer choices
   const generateOptions = () => {
     const current = items[index];
     if (!current) return;
@@ -76,13 +81,33 @@ export default function QuizScreen({ route, navigation }) {
       .map((q) => q.answer);
 
     const shuffledWrong = shuffleArray(wrongAnswers).slice(0, 3);
-    const allOptions = shuffleArray([current.answer, ...shuffledWrong]);
-
-    setOptions(allOptions);
+    setOptions(shuffleArray([current.answer, ...shuffledWrong]));
     setSelected(null);
     setIsAnswered(false);
+    playIdle();
   };
 
+  // -------------------------------------
+  // Mascot controls
+  // -------------------------------------
+  const playIdle = () => {
+    setMascotState("idle");
+    mascotRef.current?.play(idleFrames[0], idleFrames[1]);
+  };
+
+  const playHappy = () => {
+    setMascotState("happy");
+    mascotRef.current?.play(happyFrames[0], happyFrames[1]);
+  };
+
+  const playSad = () => {
+    setMascotState("sad");
+    mascotRef.current?.play(sadFrames[0], sadFrames[1]);
+  };
+
+  // -------------------------------------
+  // Answer selection
+  // -------------------------------------
   const handleSelect = (opt) => {
     if (isAnswered) return;
 
@@ -91,6 +116,9 @@ export default function QuizScreen({ route, navigation }) {
 
     if (opt === items[index].answer) {
       setScore((prev) => prev + 1);
+      playHappy();
+    } else {
+      playSad();
     }
   };
 
@@ -122,19 +150,30 @@ export default function QuizScreen({ route, navigation }) {
         Question {index + 1} of {items.length}
       </Text>
 
+      {/* 🐣 MASCOT */}
+      <LottieView
+        ref={mascotRef}
+        source={require("../../assets/robot_quiz.json")}
+        style={styles.mascot}
+        autoPlay={false}
+        loop={mascotState === "idle"}
+        onAnimationFinish={() => {
+          if (mascotState !== "idle") {
+            playIdle();
+          }
+        }}
+      />
+
       <Card style={styles.card}>
         <Card.Content>
           <Text variant="titleMedium" style={styles.question}>
             {current.question}
           </Text>
 
-          <RadioButton.Group
-            onValueChange={handleSelect}
-            value={selected}
-          >
+          <RadioButton.Group value={selected} onValueChange={handleSelect}>
             {options.map((opt, idx) => {
-              let isCorrect = opt === current.answer;
-              let isWrongSelected =
+              const isCorrect = opt === current.answer;
+              const isWrongSelected =
                 opt === selected && selected !== current.answer;
 
               return (
@@ -142,9 +181,8 @@ export default function QuizScreen({ route, navigation }) {
                   key={idx}
                   style={[
                     styles.option,
-                    isAnswered && isCorrect && { backgroundColor: "#c6f6d5" },
-                    isAnswered &&
-                      isWrongSelected && { backgroundColor: "#fed7d7" },
+                    isAnswered && isCorrect && styles.correct,
+                    isAnswered && isWrongSelected && styles.wrong,
                   ]}
                 >
                   <RadioButton value={opt} disabled={isAnswered} />
@@ -162,35 +200,33 @@ export default function QuizScreen({ route, navigation }) {
         </Button>
       )}
 
-      <Button
-        mode="text"
-        onPress={() => navigation.goBack()}
-        style={{ marginTop: 16 }}
-      >
+      <Button mode="text" onPress={() => navigation.goBack()} style={{ marginTop: 16 }}>
         Exit
       </Button>
 
-      <Text style={{ marginTop: 20, textAlign: "center" }}>
-        Score: {score}
-      </Text>
+      <Text style={styles.score}>Score: {score}</Text>
     </View>
   );
 }
 
+const { width } = Dimensions.get("window");
+const mascotSize = width * 0.45;
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  header: {
-    fontWeight: "bold",
-    marginBottom: 12,
-    textAlign: "center",
+  header: { fontWeight: "bold", marginBottom: 8, textAlign: "center" },
+  counter: { marginBottom: 10, textAlign: "center", opacity: 0.7 },
+
+  mascot: {
+    width: mascotSize,
+    height: mascotSize,
+    alignSelf: "center",
+    marginBottom: 10,
   },
-  counter: {
-    marginBottom: 12,
-    textAlign: "center",
-    opacity: 0.7,
-  },
-  card: { marginBottom: 20, paddingVertical: 10 },
+
+  card: { marginBottom: 20 },
   question: { marginBottom: 20, fontWeight: "600" },
+
   option: {
     flexDirection: "row",
     backgroundColor: "#f3f3f3",
@@ -199,6 +235,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: "center",
   },
+
+  correct: { backgroundColor: "#c6f6d5" },
+  wrong: { backgroundColor: "#fed7d7" },
+
   optionText: { fontSize: 16, flexShrink: 1 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  score: { marginTop: 16, textAlign: "center" },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
