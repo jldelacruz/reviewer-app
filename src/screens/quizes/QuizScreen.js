@@ -5,6 +5,7 @@ import {
   Button,
   RadioButton,
   ProgressBar,
+  IconButton,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -17,12 +18,17 @@ export default function QuizScreen({ route, navigation }) {
   const [items, setItems] = useState([]);
   const [index, setIndex] = useState(0);
   const [options, setOptions] = useState([]);
+
   const [selected, setSelected] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
+
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
 
-  // 🤖 Mascot state
+  // 🧠 Typing effect
+  const [typedText, setTypedText] = useState("");
+
+  // 🤖 Mascot
   const [mascotState, setMascotState] = useState("idle");
   const mascotRef = useRef(null);
 
@@ -38,6 +44,24 @@ export default function QuizScreen({ route, navigation }) {
   useEffect(() => {
     if (items.length > 0) generateOptions();
   }, [items, index]);
+
+  // ✍️ Typing animation
+  useEffect(() => {
+    if (!items.length) return;
+
+    const fullText = items[index]?.question || "";
+    let i = 0;
+
+    setTypedText("");
+
+    const interval = setInterval(() => {
+      i++;
+      setTypedText(fullText.slice(0, i));
+      if (i >= fullText.length) clearInterval(interval);
+    }, 20);
+
+    return () => clearInterval(interval);
+  }, [index, items]);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,10 +81,10 @@ export default function QuizScreen({ route, navigation }) {
     setItems(globalShuffle ? shuffleArray(originalItems) : originalItems);
     setIndex(0);
     setScore(0);
+    setProgress(0);
     setSelected(null);
     setIsAnswered(false);
     playIdle();
-    setProgress(0);
   };
 
   const generateOptions = () => {
@@ -68,7 +92,9 @@ export default function QuizScreen({ route, navigation }) {
     if (!current) return;
 
     const wrong = shuffleArray(
-      items.filter((q) => q.id !== current.id).map((q) => q.answer)
+      items
+        .filter((q) => q.id !== current.id)
+        .map((q) => q.answer)
     ).slice(0, 3);
 
     setOptions(shuffleArray([current.answer, ...wrong]));
@@ -93,22 +119,37 @@ export default function QuizScreen({ route, navigation }) {
     mascotRef.current?.play(sadFrames[0], sadFrames[1]);
   };
 
-  const handleSelect = (opt) => {
+  const handleSkip = () => {
     if (isAnswered) return;
 
-    setSelected(opt);
     setIsAnswered(true);
+    setSelected(null); // nothing selected
+    setProgress((p) => p + 1 / items.length);
 
-    setProgress((prev) => prev + 1 / items.length);
+    // Skip is always wrong
+    playSad();
+  };
 
-    if (opt === items[index].answer) {
+  // 👉 Select only
+  const handleSelect = (opt) => {
+    if (isAnswered) return;
+    setSelected(opt);
+  };
+
+  // ✅ Submit
+  const handleSubmit = () => {
+    if (!selected || isAnswered) return;
+
+    setIsAnswered(true);
+    setProgress((p) => p + 1 / items.length);
+
+    if (selected === items[index].answer) {
       setScore((s) => s + 1);
       playHappy();
     } else {
       playSad();
     }
   };
-
 
   const next = () => {
     if (index + 1 === items.length) {
@@ -127,82 +168,109 @@ export default function QuizScreen({ route, navigation }) {
   }
 
   const current = items[index];
+  const isTyping = typedText.length < current.question.length;
 
   return (
     <View style={styles.container}>
-      {/* 📊 PROGRESS BAR */}
-      <ProgressBar
-        progress={progress}
-        style={styles.progress}
-        animated
-        color="#07CDFF"
-      />
+      {/* MAIN CONTENT */}
+      <View style={styles.content}>
+        {/* 📊 Progress + Exit */}
+        <View style={styles.progressRow}>
+          <IconButton
+            icon="close"
+            size={22}
+            onPress={() => navigation.goBack()}
+            style={styles.closeBtn}
+          />
 
-      <Text variant="titleLarge" style={styles.header}>
-        {reviewer.name} — Quiz
-      </Text>
-
-      <Text style={styles.counter}>
-        Question {index + 1} of {items.length}
-      </Text>
-
-      {/* 🤖 Mascot + 💬 Chat Bubble */}
-      <View style={styles.questionRow}>
-        <LottieView
-          ref={mascotRef}
-          source={require("../../assets/robot_quiz.json")}
-          style={styles.mascot}
-          autoPlay={false}
-          loop={mascotState === "idle"}
-          onAnimationFinish={() => {
-            if (mascotState !== "idle") playIdle();
-          }}
-        />
-
-        <View style={styles.bubbleWrapper}>
-          <View style={styles.bubble}>
-            <Text style={styles.questionText}>{current.question}</Text>
+          <View style={styles.progressWrapper}>
+            <ProgressBar
+              progress={progress}
+              color="#07CDFF"
+              style={styles.progress}
+            />
           </View>
         </View>
+
+        <Text style={styles.counter}>
+          Question {index + 1} of {items.length}
+        </Text>
+
+        <Text variant="titleLarge" style={styles.header}>
+          {reviewer.title} — Quiz
+        </Text>
+
+        {/* 🤖 Mascot + 💬 Bubble */}
+        <View style={styles.questionRow}>
+          <LottieView
+            ref={mascotRef}
+            source={require("../../assets/robot_quiz.json")}
+            style={styles.mascot}
+            autoPlay={false}
+            loop={mascotState === "idle"}
+            onAnimationFinish={() => {
+              if (mascotState !== "idle") playIdle();
+            }}
+          />
+
+          <View style={styles.bubbleWrapper}>
+            <View style={styles.bubble}>
+              <Text style={styles.questionText}>{typedText}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ✅ Options */}
+        <RadioButton.Group value={selected} onValueChange={handleSelect}>
+          {options.map((opt, idx) => {
+            const isCorrect = opt === current.answer;
+            const isWrong = opt === selected && selected !== current.answer;
+
+            return (
+              <View
+                key={idx}
+                style={[
+                  styles.option,
+                  isAnswered && isCorrect && styles.correct,
+                  isAnswered && isWrong && styles.wrong,
+                ]}
+              >
+                <RadioButton value={opt} disabled={isAnswered || isTyping} />
+                <Text style={styles.optionText}>{opt}</Text>
+              </View>
+            );
+          })}
+        </RadioButton.Group>
       </View>
 
-      {/* ✅ Options */}
-      <RadioButton.Group value={selected} onValueChange={handleSelect}>
-        {options.map((opt, idx) => {
-          const isCorrect = opt === current.answer;
-          const isWrong = opt === selected && selected !== current.answer;
-
-          return (
-            <View
-              key={idx}
-              style={[
-                styles.option,
-                isAnswered && isCorrect && styles.correct,
-                isAnswered && isWrong && styles.wrong,
-              ]}
+      {/* 🔒 BOTTOM ACTION BAR */}
+      <View style={styles.bottomBar}>
+        {!isAnswered ? (
+          <View style={styles.actionRow}>
+            <Button
+              mode="outlined"
+              onPress={handleSkip}
+              disabled={isTyping}
+              style={styles.skipBtn}
             >
-              <RadioButton value={opt} disabled={isAnswered} />
-              <Text style={styles.optionText}>{opt}</Text>
-            </View>
-          );
-        })}
-      </RadioButton.Group>
+              Skip
+            </Button>
 
-      {isAnswered && (
-        <Button mode="contained" onPress={next} style={{ marginTop: 10 }}>
-          {index + 1 === items.length ? "Finish Quiz" : "Next Question"}
-        </Button>
-      )}
-
-      <Button
-        mode="text"
-        onPress={() => navigation.goBack()}
-        style={{ marginTop: 16 }}
-      >
-        Exit
-      </Button>
-
-      <Text style={styles.score}>Score: {score}</Text>
+            <Button
+              mode="contained"
+              onPress={handleSubmit}
+              disabled={!selected || isTyping}
+              style={styles.submitBtn}
+            >
+              Submit
+            </Button>
+          </View>
+        ) : (
+          <Button mode="contained" onPress={next}>
+            {index + 1 === items.length ? "Finish Quiz" : "Next Question"}
+          </Button>
+        )}
+      </View>
     </View>
   );
 }
@@ -216,57 +284,42 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#f3f3f3",
   },
-
-  progress: {
-    height: 8,
-    borderRadius: 6,
-    marginBottom: 16,
-  },
-
   header: {
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 8,
-    marginTop: 20,
+    marginVertical: 20,
   },
-
   counter: {
     textAlign: "center",
     opacity: 0.7,
     marginBottom: 16,
   },
-
   questionRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 20,
   },
-
   mascot: {
     width: mascotSize,
     height: mascotSize,
     marginRight: 12,
   },
-
   bubbleWrapper: {
     flex: 1,
   },
-
   bubble: {
     marginTop: 13,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#cfcfcfb0",
+    borderColor: "#e0e0e0",
   },
-
   questionText: {
     fontSize: 16,
     fontWeight: "600",
     lineHeight: 22,
   },
-
   option: {
     flexDirection: "row",
     backgroundColor: "#f3f3f3",
@@ -275,24 +328,61 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: "center",
   },
-
-  correct: { backgroundColor: "#c6f6d5" },
-  wrong: { backgroundColor: "#fed7d7" },
-
+  correct: {
+    backgroundColor: "#c6f6d5",
+  },
+  wrong: {
+    backgroundColor: "#fed7d7",
+  },
   optionText: {
     fontSize: 16,
     flexShrink: 1,
   },
-
   score: {
     marginTop: 16,
     textAlign: "center",
     fontWeight: "600",
   },
-
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  closeBtn: {
+    margin: 0,
+  },
+  progressWrapper: {
+    flex: 1,              // ⭐ THIS makes it visible
+    justifyContent: "center",
+  },
+  progress: {
+    height: 8,
+    borderRadius: 6,
+    backgroundColor: "#e0e0e0",
+  },
+  content: {
+    flex: 1,
+  },
+  bottomBar: {
+    paddingTop: 12,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderColor: "#e0e0e0",
+    backgroundColor: "#f3f3f3",
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  skipBtn: {
+    flex: 1,
+  },
+  submitBtn: {
+    flex: 2,
   },
 });
