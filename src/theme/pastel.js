@@ -1,5 +1,5 @@
 export const pastel = {
-  primary: "#C7A6FF",
+  primary: "#07a4ffff",
   mint: "#B4F8C8",
   blue: "#008080",
   card: "#FFFFFF",

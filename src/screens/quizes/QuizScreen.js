@@ -10,6 +10,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import LottieView from "lottie-react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { pastel } from "../../theme/pastel";
 
 export default function QuizScreen({ route, navigation }) {
   const { reviewer, globalShuffle } = route.params;
@@ -171,7 +173,7 @@ export default function QuizScreen({ route, navigation }) {
   const isTyping = typedText.length < current.question.length;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* MAIN CONTENT */}
       <View style={styles.content}>
         {/* 📊 Progress + Exit */}
@@ -186,8 +188,10 @@ export default function QuizScreen({ route, navigation }) {
           <View style={styles.progressWrapper}>
             <ProgressBar
               progress={progress}
-              color="#07CDFF"
+              color={pastel.primary}
               style={styles.progress}
+              animated 
+              animationType="timing"
             />
           </View>
         </View>
@@ -235,7 +239,7 @@ export default function QuizScreen({ route, navigation }) {
                   isAnswered && isWrong && styles.wrong,
                 ]}
               >
-                <RadioButton value={opt} disabled={isAnswered || isTyping} />
+                <RadioButton value={opt} disabled={isAnswered || isTyping} color={pastel.primary} />
                 <Text style={styles.optionText}>{opt}</Text>
               </View>
             );
@@ -253,7 +257,7 @@ export default function QuizScreen({ route, navigation }) {
               disabled={isTyping}
               style={styles.skipBtn}
             >
-              Skip
+              SKIP
             </Button>
 
             <Button
@@ -261,17 +265,18 @@ export default function QuizScreen({ route, navigation }) {
               onPress={handleSubmit}
               disabled={!selected || isTyping}
               style={styles.submitBtn}
+              buttonColor={pastel.primary}
             >
-              Submit
+              SUBMIT
             </Button>
           </View>
         ) : (
-          <Button mode="contained" onPress={next}>
-            {index + 1 === items.length ? "Finish Quiz" : "Next Question"}
+          <Button mode="contained" onPress={next} buttonColor={pastel.primary}>
+            {index + 1 === items.length ? "FINISH" : "CONTINUE"}
           </Button>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -313,7 +318,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderColor: "#cfcfcfff",
   },
   questionText: {
     fontSize: 16,
@@ -337,11 +342,6 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     flexShrink: 1,
-  },
-  score: {
-    marginTop: 16,
-    textAlign: "center",
-    fontWeight: "600",
   },
   center: {
     flex: 1,
