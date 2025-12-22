@@ -1,7 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { View, StyleSheet, PermissionsAndroid, Platform, Dimensions } from "react-native";
 import { Text, TextInput, Button, IconButton } from "react-native-paper";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import BottomSheet, {
+  BottomSheetView,
+  BottomSheetBackdrop,
+} from "@gorhom/bottom-sheet";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
@@ -46,6 +49,17 @@ export default function QnAFormScreen({ route, navigation }) {
     setIsListening(false);
     mascotRef.current?.reset();
   };
+
+  const renderBackdrop = (props) => (
+    <BottomSheetBackdrop
+      {...props}
+      appearsOnIndex={0}   // show backdrop when sheet opens
+      disappearsOnIndex={-1} // hide when closed
+      opacity={0.4}        // dim strength (tweak if you want)
+      pressBehavior="close" // tap outside to close sheet
+    />
+  );
+
 
   // Ask for mic permission
   async function requestMicPermission() {
@@ -195,7 +209,7 @@ export default function QnAFormScreen({ route, navigation }) {
       </Button>
 
       {/* BOTTOM SHEET WITH MASCOT + STT UI */}
-      <BottomSheet ref={bottomSheetRef} snapPoints={snapPoints} index={-1}>
+      <BottomSheet ref={bottomSheetRef} snapPoints={snapPoints} index={-1} backdropComponent={renderBackdrop}>
         <BottomSheetView style={styles.sheetContainer}>
           <LottieView
             ref={mascotRef}

@@ -2,11 +2,7 @@
 import React from "react";
 import { StyleSheet } from "react-native";
 import { Portal, Modal, Text, TextInput, Button } from "react-native-paper";
-
-const pastel = {
-  textDark: "#2A2A2A",
-  blue: "#A5C8FF",
-};
+import { pastel } from "../theme/pastel";
 
 export default function ReviewerModal({
   visible,
@@ -24,7 +20,7 @@ export default function ReviewerModal({
         </Text>
 
         <TextInput
-          label="Reviewer Title"
+          label="Title"
           value={value}
           onChangeText={setValue}
           mode="outlined"
@@ -35,12 +31,13 @@ export default function ReviewerModal({
           mode="contained"
           onPress={onSave}
           style={styles.saveBtn}
-          buttonColor={pastel.blue}
+          buttonColor={pastel.primary}
+          icon="check"
         >
           Save
         </Button>
 
-        <Button onPress={onDismiss}>Cancel</Button>
+        <Button onPress={onDismiss} icon="close">Cancel</Button>
       </Modal>
     </Portal>
   );

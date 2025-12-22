@@ -27,9 +27,9 @@ export default function ReviewerCard({ item, onPress, onEdit, onDelete, onPlay }
             </Text>
           </View>
 
-          <IconButton icon="play" size={23} onPress={onPlay} />
-          <IconButton icon="pencil" size={20} onPress={onEdit} />
-          <IconButton icon="delete" size={20} onPress={onDelete} />
+          <IconButton icon="play-circle" iconColor={pastel.primary} size={30} onPress={onPlay} />
+          {/* <IconButton icon="pencil" size={20} onPress={onEdit} />
+          <IconButton icon="delete" size={20} onPress={onDelete} /> */}
         </Card.Content>
       </Card>
     </TouchableRipple>

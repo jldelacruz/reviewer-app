@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
+import { View, StyleSheet, Dimensions, Pressable  } from "react-native";
 import {
   Text,
   Button,
@@ -227,21 +227,30 @@ export default function QuizScreen({ route, navigation }) {
         {/* ✅ Options */}
         <RadioButton.Group value={selected} onValueChange={handleSelect}>
           {options.map((opt, idx) => {
+            const isSelected = selected === opt;
             const isCorrect = opt === current.answer;
-            const isWrong = opt === selected && selected !== current.answer;
+            const isWrong = isAnswered && isSelected && opt !== current.answer;
 
             return (
-              <View
+              <Pressable
                 key={idx}
+                onPress={() => handleSelect(opt)}
+                disabled={isAnswered || isTyping}
                 style={[
                   styles.option,
+                  isSelected && styles.optionSelected,
                   isAnswered && isCorrect && styles.correct,
-                  isAnswered && isWrong && styles.wrong,
+                  isWrong && styles.wrong,
                 ]}
               >
-                <RadioButton value={opt} disabled={isAnswered || isTyping} color={pastel.primary} />
+                <RadioButton
+                  value={opt}
+                  color={pastel.primary}
+                  disabled={isAnswered || isTyping}
+                />
+
                 <Text style={styles.optionText}>{opt}</Text>
-              </View>
+              </Pressable>
             );
           })}
         </RadioButton.Group>
@@ -256,6 +265,7 @@ export default function QuizScreen({ route, navigation }) {
               onPress={handleSkip}
               disabled={isTyping}
               style={styles.skipBtn}
+              icon="arrow-right"
             >
               SKIP
             </Button>
@@ -266,12 +276,13 @@ export default function QuizScreen({ route, navigation }) {
               disabled={!selected || isTyping}
               style={styles.submitBtn}
               buttonColor={pastel.primary}
+              icon="check"
             >
               SUBMIT
             </Button>
           </View>
         ) : (
-          <Button mode="contained" onPress={next} buttonColor={pastel.primary}>
+          <Button mode="contained" onPress={next} buttonColor={pastel.primary} icon="arrow-right">
             {index + 1 === items.length ? "FINISH" : "CONTINUE"}
           </Button>
         )}
@@ -287,7 +298,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#f3f3f3",
+    backgroundColor: pastel.light
   },
   header: {
     fontWeight: "bold",
@@ -332,6 +343,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
     alignItems: "center",
+
+    borderWidth: 2,
+    borderColor: "#fff"
+  },
+  optionSelected: {
+    borderColor: pastel.primary, // 🔵 blue border when selected
+    backgroundColor: "#eef8ff",
+    borderWidth: 2,
   },
   correct: {
     backgroundColor: "#c6f6d5",
@@ -373,7 +392,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: 1,
     borderColor: "#e0e0e0",
-    backgroundColor: "#f3f3f3",
+    backgroundColor: pastel.light,
   },
   actionRow: {
     flexDirection: "row",
